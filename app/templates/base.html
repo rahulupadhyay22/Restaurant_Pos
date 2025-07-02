@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Restaurant POS{% endblock %}</title>
+    
+    <!-- Tailwind CSS (Local) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+    
+    <!-- Font Awesome (Local) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome.css') }}">
+    
+    <!-- Custom CSS -->
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 64px);
+        }
+        
+        .main-content {
+            min-height: calc(100vh - 64px);
+        }
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            .print-only {
+                display: block !important;
+            }
+        }
+        
+        .print-only {
+            display: none;
+        }
+    </style>
+    
+    <!-- Socket.IO (Local) -->
+    <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+    
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-100">
+    {% if current_user.is_authenticated %}
+    <nav class="bg-blue-600 text-white shadow-md no-print">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="{{ url_for('admin.dashboard' if current_user.is_admin() else 'staff.dashboard') }}" class="text-xl font-bold">Restaurant POS</a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm">{{ current_user.username }} ({{ current_user.role }})</span>
+                <a href="{{ url_for('auth.logout') }}" class="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded">Logout</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="flex no-print">
+        <aside class="sidebar w-64 bg-white shadow-md">
+            <div class="p-4">
+                <h2 class="text-lg font-semibold mb-4">Menu</h2>
+                <ul class="space-y-2">
+                    {% if current_user.is_admin() %}
+                    <li>
+                        <a href="{{ url_for('admin.dashboard') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('menu.categories') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-list mr-2"></i> Categories
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('menu.items') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-utensils mr-2"></i> Menu Items
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('table.index') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-chair mr-2"></i> Tables
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('order.index') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-clipboard-list mr-2"></i> Orders
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('billing.index') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-file-invoice-dollar mr-2"></i> Billing
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('delivery.index') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-motorcycle mr-2"></i> Delivery
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.users') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-users mr-2"></i> Users
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.reports') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-chart-bar mr-2"></i> Reports
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.settings') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-cog mr-2"></i> Settings
+                        </a>
+                    </li>
+                    {% else %}
+                    <li>
+                        <a href="{{ url_for('staff.dashboard') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('menu.index') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-utensils mr-2"></i> Menu
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('order.index') }}" class="block py-2 px-4 rounded hover:bg-blue-100">
+                            <i class="fas fa-clipboard-list mr-2"></i> Orders
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </aside>
+        
+        <main class="main-content flex-1 p-6">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert {{ category }} bg-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' }}-100 border-l-4 border-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' }}-500 text-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' }}-700 p-4 mb-4">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% else %}
+    <main class="min-h-screen flex items-center justify-center bg-gray-100">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="fixed top-4 right-4 w-80">
+                    {% for category, message in messages %}
+                        <div class="alert {{ category }} bg-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' }}-100 border-l-4 border-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' }}-500 text-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' }}-700 p-4 mb-4">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        {% block auth_content %}{% endblock %}
+    </main>
+    {% endif %}
+
+    {% if license_days_left is not none %}
+    {% if license_days_left > 30 %}
+    {% set bg_color = 'bg-green-200' %}
+    {% set text_color = 'text-green-900' %}
+    {% elif license_days_left > 7 %}
+    {% set bg_color = 'bg-yellow-200' %}
+    {% set text_color = 'text-yellow-900' %}
+    {% else %}
+    {% set bg_color = 'bg-red-200' %}
+    {% set text_color = 'text-red-900' %}
+    {% endif %}
+    <div class="fixed bottom-4 right-4 {{ bg_color }} {{ text_color }} px-4 py-3 rounded shadow-lg text-sm z-50">
+    🔔 License: {{ license_days_left }} day{{ 's' if license_days_left != 1 else '' }} left (expires {{ license_expiry_date }})
+    </div>
+    {% elif license_error %}
+    <div class="fixed bottom-4 right-4 bg-red-200 text-red-900 px-4 py-3 rounded shadow-lg text-sm z-50">
+    ❌ License Error: {{ license_error }}
+    </div>
+    {% endif %}
+
+    
+    <!-- Print Content -->
+    <div class="print-only">
+        {% block print_content %}{% endblock %}
+    </div>
+
+    
+    <!-- JavaScript -->
+    <script>
+        // Socket.IO connection
+        {% if current_user.is_authenticated %}
+        const socket = io();
+        
+        socket.on('connect', function() {
+            console.log('Connected to Socket.IO server');
+        });
+        
+        socket.on('disconnect', function() {
+            console.log('Disconnected from Socket.IO server');
+        });
+        
+        {% if current_user.is_admin() %}
+        // Admin-specific socket events
+        socket.on('new_order', function(data) {
+            // Play notification sound
+            const audio = new Audio('/static/sounds/notification.mp3');
+            audio.play();
+            
+            // Show notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('New Order', {
+                    body: `New order #${data.order_id} has been placed for ${data.table_name}`,
+                    icon: '/static/images/logo.png'
+                });
+            }
+            
+            // Refresh orders if on the orders page
+            if (window.location.pathname === '{{ url_for("admin.dashboard") }}') {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        });
+        
+        socket.on('new_delivery_order', function(data) {
+            // Play notification sound
+            const audio = new Audio('/static/sounds/notification.mp3');
+            audio.play();
+            
+            // Show notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('New Delivery Order', {
+                    body: `New ${data.platform} delivery order has arrived`,
+                    icon: '/static/images/logo.png'
+                });
+            }
+            
+            // Refresh delivery orders if on the delivery page
+            if (window.location.pathname === '{{ url_for("delivery.index") }}') {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        });
+        {% endif %}
+        {% endif %}
+        
+        // Request notification permission
+        function requestNotificationPermission() {
+            if ('Notification' in window) {
+                Notification.requestPermission();
+            }
+        }
+        
+        // Call when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            requestNotificationPermission();
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+    
+</body>
+</html> 

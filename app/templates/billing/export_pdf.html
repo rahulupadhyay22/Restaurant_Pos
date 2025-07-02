@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Bills Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            font-size: 12px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .report-header {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .text-center {
+            text-align: center;
+        }
+        
+        /* Print controls */
+        .print-controls {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        /* Only show controls when not printing */
+        @media print {
+            .print-controls {
+                display: none;
+            }
+            
+            /* Ensure good print layout */
+            body {
+                margin: 0;
+                padding: 10mm;
+            }
+            
+            table {
+                page-break-inside: auto;
+            }
+            
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            
+            thead {
+                display: table-header-group;
+            }
+            
+            tfoot {
+                display: table-footer-group;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% if standalone %}
+    <div class="print-controls">
+        <button onclick="window.print()">Print Report</button>
+        <button onclick="window.location.href='{{ url_for('billing.index') }}'">Back to Billing</button>
+    </div>
+    {% endif %}
+    
+    <h1>Bills Report</h1>
+    
+    <div class="report-header">
+        <p><strong>Generated:</strong> {{ now().strftime('%Y-%m-%d %H:%M') }}</p>
+        {% if start_date %}
+            <p><strong>From:</strong> {{ start_date.strftime('%Y-%m-%d') }}</p>
+        {% endif %}
+        {% if end_date %}
+            <p><strong>To:</strong> {{ end_date.strftime('%Y-%m-%d') }}</p>
+        {% endif %}
+        <p><strong>Total Bills:</strong> {{ bills|length }}</p>
+    </div>
+    
+    {% if bills %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Bill #</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th class="text-right">Subtotal</th>
+                    <th class="text-right">Tax</th>
+                    <th class="text-right">Discount</th>
+                    <th class="text-right">Total</th>
+                    <th class="text-center">Status</th>
+                    <th>Payment Method</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bill in bills %}
+                    <tr>
+                        <td>{{ bill.bill_number }}</td>
+                        <td>{{ bill.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ bill.order.customer_name if bill.order.customer_name else 'Walk-in Customer' }}</td>
+                        <td class="text-right">₹{{ "%.2f"|format(bill.subtotal) }}</td>
+                        <td class="text-right">₹{{ "%.2f"|format(bill.tax_amount) }}</td>
+                        <td class="text-right">₹{{ "%.2f"|format(bill.discount) }}</td>
+                        <td class="text-right">₹{{ "%.2f"|format(bill.total_amount) }}</td>
+                        <td class="text-center">{{ 'Paid' if bill.payment_status else 'Unpaid' }}</td>
+                        <td>{{ bill.payment_method.value if bill.payment_method else '' }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Summary -->
+        <div style="margin-top: 20px;">
+            <h3>Summary</h3>
+            <table>
+                <tr>
+                    <th>Total Revenue</th>
+                    <td class="text-right">₹{{ "%.2f"|format(bills|sum(attribute='total_amount')) }}</td>
+                </tr>
+                <tr>
+                    <th>Total Tax Collected</th>
+                    <td class="text-right">₹{{ "%.2f"|format(bills|sum(attribute='tax_amount')) }}</td>
+                </tr>
+                <tr>
+                    <th>Total Discounts Given</th>
+                    <td class="text-right">₹{{ "%.2f"|format(bills|sum(attribute='discount')) }}</td>
+                </tr>
+                <tr>
+                    <th>Paid Bills</th>
+                    <td class="text-right">{{ bills|selectattr('payment_status')|list|length }}</td>
+                </tr>
+                <tr>
+                    <th>Unpaid Bills</th>
+                    <td class="text-right">{{ bills|rejectattr('payment_status')|list|length }}</td>
+                </tr>
+            </table>
+        </div>
+    {% else %}
+        <p>No bills found for the selected period.</p>
+    {% endif %}
+    
+    <div class="footer">
+        <p>Generated by Restaurant POS System</p>
+    </div>
+    
+    {% if print_friendly %}
+    <script>
+        window.onload = function() {
+            // Automatically trigger print dialog
+            window.print();
+        }
+    </script>
+    {% endif %}
+</body>
+</html> 

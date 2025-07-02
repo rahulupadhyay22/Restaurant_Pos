@@ -1,0 +1,157 @@
+"{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - Restaurant POS{% endblock %}
+
+{% block content %}
+<div class="container mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">Admin Dashboard</h1>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-500 mr-4">
+                    <i class="fas fa-dollar-sign text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 uppercase">Today's Sales</p>
+                    <p class="text-xl font-semibold">₹{{ total_sales|round(2) }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-500 mr-4">
+                    <i class="fas fa-clipboard-list text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 uppercase">Today's Orders</p>
+                    <p class="text-xl font-semibold">{{ orders_today }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-500 mr-4">
+                    <i class="fas fa-chair text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 uppercase">Active Tables</p>
+                    <p class="text-xl font-semibold">{{ active_tables }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Orders -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4">Recent Orders</h2>
+        
+        {% if recent_orders %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="py-2 px-4 text-left">Order #</th>
+                        <th class="py-2 px-4 text-left">Table</th>
+                        <th class="py-2 px-4 text-left">Items</th>
+                        <th class="py-2 px-4 text-left">Total</th>
+                        <th class="py-2 px-4 text-left">Time</th>
+                        <th class="py-2 px-4 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr class="border-t">
+                        <td class="py-2 px-4">{{ order.id }}</td>
+                        <td class="py-2 px-4">{{ order.table.name if order.table else 'Delivery' }}</td>
+                        <td class="py-2 px-4">{{ order.items.count() }}</td>
+                        <td class="py-2 px-4">₹{{ order.total_amount|round(2) }}</td>
+                        <td class="py-2 px-4">{{ order.created_at.strftime('%H:%M:%S') }}</td>
+                        <td class="py-2 px-4">
+                            <a href="{{ url_for('order.view_order', order_id=order.id) }}" class="text-blue-500 hover:underline">View</a>
+                            <a href="{{ url_for('billing.generate_bill', order_id=order.id) }}" class="ml-2 text-green-500 hover:underline">Bill</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-gray-500">No recent orders.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Delivery Orders -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Pending Delivery Orders</h2>
+        
+        {% if delivery_orders %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="py-2 px-4 text-left">Platform</th>
+                        <th class="py-2 px-4 text-left">Order #</th>
+                        <th class="py-2 px-4 text-left">Customer</th>
+                        <th class="py-2 px-4 text-left">Status</th>
+                        <th class="py-2 px-4 text-left">Time</th>
+                        <th class="py-2 px-4 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in delivery_orders %}
+                    <tr class="border-t">
+                        <td class="py-2 px-4">
+                            <span class="px-2 py-1 rounded text-xs {{ 'bg-red-100 text-red-800' if order.platform.value == 'zomato' else 'bg-orange-100 text-orange-800' }}">
+                                {{ order.platform.value|upper }}
+                            </span>
+                        </td>
+                        <td class="py-2 px-4">{{ order.platform_order_id }}</td>
+                        <td class="py-2 px-4">{{ order.customer_name }}</td>
+                        <td class="py-2 px-4">
+                            <span class="px-2 py-1 rounded text-xs 
+                                {{ 'bg-yellow-100 text-yellow-800' if order.status.value == 'pending' else 
+                                   'bg-blue-100 text-blue-800' if order.status.value == 'accepted' else 
+                                   'bg-green-100 text-green-800' if order.status.value == 'preparing' else 
+                                   'bg-gray-100 text-gray-800' }}">
+                                {{ order.status.value|upper }}
+                            </span>
+                        </td>
+                        <td class="py-2 px-4">{{ order.created_at.strftime('%H:%M:%S') }}</td>
+                        <td class="py-2 px-4">
+                            <a href="{{ url_for('delivery.view_order', delivery_id=order.id) }}" class="text-blue-500 hover:underline">View</a>
+                            
+                            {% if order.status.value == 'pending' %}
+                            <form method="POST" action="{{ url_for('delivery.accept_order', delivery_id=order.id) }}" class="inline">
+                                <button type="submit" class="ml-2 text-green-500 hover:underline">Accept</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('delivery.reject_order', delivery_id=order.id) }}" class="inline">
+                                <button type="submit" class="ml-2 text-red-500 hover:underline">Reject</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-gray-500">No pending delivery orders.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Refresh the page every 30 seconds to get updates
+    setTimeout(function() {
+        window.location.reload();
+    }, 30000);
+</script>
+{% endblock %}"

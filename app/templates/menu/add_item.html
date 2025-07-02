@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Menu Item{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Add New Menu Item</h1>
+        <a href="{{ url_for('menu.items') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+            Back to Menu Items
+        </a>
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg p-6 max-w-2xl mx-auto">
+        <form method="post">
+            {{ form.csrf_token }}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mb-4">
+                    <label for="{{ form.name.id }}" class="block text-gray-700 text-sm font-bold mb-2">
+                        {{ form.name.label.text }}
+                    </label>
+                    {{ form.name(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% if form.name.errors %}
+                        <div class="text-red-500 text-sm mt-1">
+                            {% for error in form.name.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ form.category_id.id }}" class="block text-gray-700 text-sm font-bold mb-2">
+                        {{ form.category_id.label.text }}
+                    </label>
+                    {{ form.category_id(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% if form.category_id.errors %}
+                        <div class="text-red-500 text-sm mt-1">
+                            {% for error in form.category_id.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4 md:col-span-2">
+                    <label for="{{ form.description.id }}" class="block text-gray-700 text-sm font-bold mb-2">
+                        {{ form.description.label.text }}
+                    </label>
+                    {{ form.description(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", rows=3) }}
+                    {% if form.description.errors %}
+                        <div class="text-red-500 text-sm mt-1">
+                            {% for error in form.description.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ form.full_price.id }}" class="block text-gray-700 text-sm font-bold mb-2">
+                        {{ form.full_price.label.text }}
+                    </label>
+                    {{ form.full_price(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% if form.full_price.errors %}
+                        <div class="text-red-500 text-sm mt-1">
+                            {% for error in form.full_price.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label class="flex items-center mb-2">
+                        {{ form.has_half_option(class="form-checkbox h-5 w-5 text-blue-600") }}
+                        <span class="ml-2 text-gray-700 text-sm font-bold">{{ form.has_half_option.label.text }}</span>
+                    </label>
+                    
+                    <label for="{{ form.half_price.id }}" class="block text-gray-700 text-sm font-bold mb-2">
+                        {{ form.half_price.label.text }}
+                    </label>
+                    {{ form.half_price(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% if form.half_price.errors %}
+                        <div class="text-red-500 text-sm mt-1">
+                            {% for error in form.half_price.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ form.image_url.id }}" class="block text-gray-700 text-sm font-bold mb-2">
+                        {{ form.image_url.label.text }}
+                    </label>
+                    {{ form.image_url(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% if form.image_url.errors %}
+                        <div class="text-red-500 text-sm mt-1">
+                            {% for error in form.image_url.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        {{ form.is_available(class="form-checkbox h-5 w-5 text-blue-600") }}
+                        <span class="ml-2 text-gray-700 text-sm font-bold">{{ form.is_available.label.text }}</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-end mt-4">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    {{ form.submit.label.text }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const hasHalfOption = document.getElementById('has_half_option');
+        const halfPriceField = document.getElementById('half_price').parentNode;
+        
+        function toggleHalfPrice() {
+            if (hasHalfOption.checked) {
+                halfPriceField.classList.remove('opacity-50');
+                halfPriceField.querySelector('input').disabled = false;
+            } else {
+                halfPriceField.classList.add('opacity-50');
+                halfPriceField.querySelector('input').disabled = true;
+            }
+        }
+        
+        // Initial state
+        toggleHalfPrice();
+        
+        // Add event listener
+        hasHalfOption.addEventListener('change', toggleHalfPrice);
+    });
+</script>
+{% endblock %}
+{% endblock %} 

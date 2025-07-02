@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff Dashboard - Restaurant POS{% endblock %}
+
+{% block content %}
+<div class="container mx-auto">
+    <h1 class="text-3xl font-bold mb-6">Table Management</h1>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {% for table in tables %}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-4 {{ 'bg-green-100' if not table.is_occupied else 'bg-red-100' }}">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-semibold">{{ table.name }}</h2>
+                    <span class="px-2 py-1 rounded text-xs {{ 'bg-green-200 text-green-800' if not table.is_occupied else 'bg-red-200 text-red-800' }}">
+                        {{ 'Available' if not table.is_occupied else 'Occupied' }}
+                    </span>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">Capacity: {{ table.capacity }}</p>
+            </div>
+            
+            <div class="p-4">
+                {% if table.is_occupied %}
+                <p class="text-sm mb-3">{{ table.status }}</p>
+                {% endif %}
+                
+                <a href="{{ url_for('staff.table_detail', table_id=table.id) }}" class="block w-full bg-blue-500 hover:bg-blue-600 text-white text-center py-2 px-4 rounded">
+                    {{ 'View Orders' if table.is_occupied else 'Take Order' }}
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

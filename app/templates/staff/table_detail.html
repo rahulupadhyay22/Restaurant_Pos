@@ -1,0 +1,494 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ table.name }} - Restaurant POS{% endblock %}
+
+{% block head %}
+<style>
+    .menu-item {
+        transition: all 0.2s ease;
+    }
+    
+    .menu-item:hover {
+        transform: translateY(-2px);
+    }
+    
+    .order-item {
+        transition: all 0.2s ease;
+    }
+    
+    .order-item:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">{{ table.name }}</h1>
+        <span class="px-3 py-1 rounded text-sm {{ 'bg-green-200 text-green-800' if not table.is_occupied else 'bg-red-200 text-red-800' }}">
+            {{ 'Available' if not table.is_occupied else 'Occupied' }}
+        </span>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Menu Section -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Menu</h2>
+                
+                <!-- Category Tabs -->
+                <div class="mb-6">
+                    <div class="border-b border-gray-200">
+                        <nav class="flex flex-wrap -mb-px">
+                            <button class="category-tab mr-2 py-2 px-4 border-b-2 border-blue-500 text-blue-500 font-medium" data-category="all">All</button>
+                            {% for category in categories %}
+                            <button class="category-tab mr-2 py-2 px-4 border-b-2 border-transparent hover:border-gray-300 hover:text-gray-600" data-category="{{ category.id }}">{{ category.name }}</button>
+                            {% endfor %}
+                        </nav>
+                    </div>
+                </div>
+                
+                <!-- Menu Items -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for category in categories %}
+                        {% for item in category.menu_items %}
+                            {% if item.is_available %}
+                            <div class="menu-item bg-white border rounded-lg shadow-sm overflow-hidden" data-category="{{ category.id }}">
+                                <div class="p-4">
+                                    <div class="flex justify-between items-start">
+                                        <h3 class="text-lg font-medium">{{ item.name }}</h3>
+                                        <div class="text-right">
+                                            {% if item.has_half_option %}
+                                            <p class="text-sm text-gray-600">Half: ₹{{ item.half_price }}</p>
+                                            {% endif %}
+                                            <p class="font-semibold">Full: ₹{{ item.full_price }}</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mt-1">{{ item.description }}</p>
+                                    <div class="mt-3 flex justify-end">
+                                        <button class="add-to-order bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm" 
+                                                data-id="{{ item.id }}" 
+                                                data-name="{{ item.name }}" 
+                                                data-half-price="{{ item.half_price }}" 
+                                                data-full-price="{{ item.full_price }}" 
+                                                data-has-half="{{ item.has_half_option|lower }}">
+                                            Add to Order
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Section -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-md p-6 sticky top-6">
+                <h2 class="text-xl font-semibold mb-4">Current Order</h2>
+                
+                {% if active_order %}
+                <p class="mb-4 text-sm bg-blue-100 text-blue-800 p-2 rounded">
+                    Order #{{ active_order.id }} is active for this table.
+                </p>
+                {% endif %}
+                
+                <div id="order-items" class="mb-4">
+                    {% if active_order %}
+                        {% for item in active_order.items %}
+                        <div class="order-item flex justify-between items-center py-2 border-b">
+                            <div>
+                                <p class="font-medium">{{ item.menu_item.name }}</p>
+                                <p class="text-sm text-gray-600">
+                                    {{ item.quantity }} x 
+                                    {% if item.is_half %}
+                                    Half: ₹{{ item.price }}
+                                    {% else %}
+                                    Full: ₹{{ item.price }}
+                                    {% endif %}
+                                </p>
+                                {% if item.notes %}
+                                <p class="text-xs text-gray-500">Note: {{ item.notes }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="text-right">
+                                <p class="font-semibold">₹{{ item.subtotal }}</p>
+                                <button class="remove-item text-red-500 text-sm hover:text-red-700" data-id="{{ item.id }}">Remove</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p id="no-items-message" class="text-gray-500">No items in order yet.</p>
+                    {% endif %}
+                </div>
+                
+                <div class="border-t pt-4">
+                    <div class="flex justify-between mb-2">
+                        <p>Subtotal:</p>
+                        <p id="subtotal" class="font-semibold">₹{{ active_order.total_amount if active_order else '0.00' }}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    {% if active_order %}
+                    <button id="add-more-items" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-2">
+                        Add More Items
+                    </button>
+                    <a href="{{ url_for('order.view_order', order_id=active_order.id) }}" class="block w-full bg-green-500 hover:bg-green-600 text-white text-center py-2 px-4 rounded">
+                        View Complete Order
+                    </a>
+                    {% else %}
+                    <button id="place-order" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded">
+                        Place Order
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Item Modal -->
+<div id="add-item-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold" id="modal-item-name">Add Item</h3>
+            <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Quantity</label>
+            <div class="flex items-center">
+                <button id="decrease-quantity" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-l">-</button>
+                <input type="number" id="item-quantity" class="border text-center w-16 py-1" value="1" min="1">
+                <button id="increase-quantity" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-r">+</button>
+            </div>
+        </div>
+        
+        <div id="size-options" class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Size</label>
+            <div class="flex">
+                <label class="inline-flex items-center mr-4">
+                    <input type="radio" name="size" value="full" checked class="form-radio">
+                    <span class="ml-2">Full</span>
+                </label>
+                <label id="half-option" class="inline-flex items-center">
+                    <input type="radio" name="size" value="half" class="form-radio">
+                    <span class="ml-2">Half</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Notes (Optional)</label>
+            <textarea id="item-notes" class="border rounded w-full py-2 px-3" rows="2"></textarea>
+        </div>
+        
+        <div class="flex justify-between items-center mt-6">
+            <p>Price: <span id="modal-price" class="font-semibold">₹0.00</span></p>
+            <button id="add-to-order-confirm" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
+                Add to Order
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Variables
+        let currentOrder = {
+            table_id: {{ table.id }},
+            items: []
+        };
+        
+        {% if active_order %}
+        // Load existing order items
+        {% for item in active_order.items %}
+        currentOrder.items.push({
+            menu_item_id: {{ item.menu_item_id }},
+            quantity: {{ item.quantity }},
+            is_half: {{ 'true' if item.is_half else 'false' }},
+            price: {{ item.price }},
+            notes: "{{ item.notes|default('', true) }}"
+        });
+        {% endfor %}
+        {% endif %}
+        
+        // Modal elements
+        const modal = document.getElementById('add-item-modal');
+        const closeModal = document.getElementById('close-modal');
+        const modalItemName = document.getElementById('modal-item-name');
+        const modalPrice = document.getElementById('modal-price');
+        const itemQuantity = document.getElementById('item-quantity');
+        const decreaseQuantity = document.getElementById('decrease-quantity');
+        const increaseQuantity = document.getElementById('increase-quantity');
+        const sizeOptions = document.getElementById('size-options');
+        const halfOption = document.getElementById('half-option');
+        const itemNotes = document.getElementById('item-notes');
+        const addToOrderConfirm = document.getElementById('add-to-order-confirm');
+        
+        // Current item being added
+        let currentItem = null;
+        
+        // Category tabs
+        const categoryTabs = document.querySelectorAll('.category-tab');
+        const menuItems = document.querySelectorAll('.menu-item');
+        
+        // Add to order buttons
+        const addToOrderButtons = document.querySelectorAll('.add-to-order');
+        
+        // Place order button
+        const placeOrderButton = document.getElementById('place-order');
+        const addMoreItemsButton = document.getElementById('add-more-items');
+        
+        // Category filter
+        categoryTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Update active tab
+                categoryTabs.forEach(t => t.classList.remove('border-blue-500', 'text-blue-500'));
+                categoryTabs.forEach(t => t.classList.add('border-transparent', 'hover:border-gray-300', 'hover:text-gray-600'));
+                this.classList.add('border-blue-500', 'text-blue-500');
+                this.classList.remove('border-transparent', 'hover:border-gray-300', 'hover:text-gray-600');
+                
+                // Filter menu items
+                const categoryId = this.dataset.category;
+                menuItems.forEach(item => {
+                    if (categoryId === 'all' || item.dataset.category === categoryId) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        });
+        
+        // Open modal when "Add to Order" is clicked
+        addToOrderButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const id = parseInt(this.dataset.id);
+                const name = this.dataset.name;
+                const halfPrice = parseFloat(this.dataset.halfPrice || 0);
+                const fullPrice = parseFloat(this.dataset.fullPrice);
+                const hasHalf = this.dataset.hasHalf === 'true';
+                
+                // Set current item
+                currentItem = {
+                    id: id,
+                    name: name,
+                    halfPrice: halfPrice,
+                    fullPrice: fullPrice,
+                    hasHalf: hasHalf
+                };
+                
+                // Update modal
+                modalItemName.textContent = name;
+                modalPrice.textContent = `${fullPrice.toFixed(2)}`;
+                itemQuantity.value = 1;
+                itemNotes.value = '';
+                
+                // Show/hide half option
+                if (hasHalf) {
+                    sizeOptions.style.display = 'block';
+                    halfOption.style.display = 'block';
+                } else {
+                    sizeOptions.style.display = 'block';
+                    halfOption.style.display = 'none';
+                }
+                
+                // Reset size selection
+                document.querySelector('input[name="size"][value="full"]').checked = true;
+                
+                // Show modal
+                modal.classList.remove('hidden');
+            });
+        });
+        
+        // Close modal
+        closeModal.addEventListener('click', function() {
+            modal.classList.add('hidden');
+        });
+        
+        // Quantity controls
+        decreaseQuantity.addEventListener('click', function() {
+            const currentValue = parseInt(itemQuantity.value);
+            if (currentValue > 1) {
+                itemQuantity.value = currentValue - 1;
+                updateModalPrice();
+            }
+        });
+        
+        increaseQuantity.addEventListener('click', function() {
+            const currentValue = parseInt(itemQuantity.value);
+            itemQuantity.value = currentValue + 1;
+            updateModalPrice();
+        });
+        
+        // Update price when quantity or size changes
+        itemQuantity.addEventListener('change', updateModalPrice);
+        document.querySelectorAll('input[name="size"]').forEach(radio => {
+            radio.addEventListener('change', updateModalPrice);
+        });
+        
+        // Update modal price
+        function updateModalPrice() {
+            if (!currentItem) return;
+            
+            const quantity = parseInt(itemQuantity.value);
+            const isHalf = document.querySelector('input[name="size"]:checked').value === 'half';
+            const price = isHalf ? currentItem.halfPrice : currentItem.fullPrice;
+            
+            modalPrice.textContent = `${(price * quantity).toFixed(2)}`;
+        }
+        
+        // Add item to order
+        addToOrderConfirm.addEventListener('click', function() {
+            if (!currentItem) return;
+            
+            const quantity = parseInt(itemQuantity.value);
+            const isHalf = document.querySelector('input[name="size"]:checked').value === 'half';
+            const notes = itemNotes.value.trim();
+            const price = isHalf ? currentItem.halfPrice : currentItem.fullPrice;
+            
+            // Add to current order
+            currentOrder.items.push({
+                menu_item_id: currentItem.id,
+                quantity: quantity,
+                is_half: isHalf,
+                price: price,
+                notes: notes
+            });
+            
+            // Close modal
+            modal.classList.add('hidden');
+            
+            // Update order display
+            updateOrderDisplay();
+        });
+        
+        // Update order display
+        function updateOrderDisplay() {
+            const orderItems = document.getElementById('order-items');
+            const noItemsMessage = document.getElementById('no-items-message');
+            const subtotal = document.getElementById('subtotal');
+            
+            // Calculate subtotal
+            let total = 0;
+            currentOrder.items.forEach(item => {
+                total += item.price * item.quantity;
+            });
+            
+            // Update subtotal display
+            subtotal.textContent = `${total.toFixed(2)}`;
+            
+            // Show/hide no items message
+            if (currentOrder.items.length === 0) {
+                if (noItemsMessage) {
+                    noItemsMessage.style.display = 'block';
+                } else {
+                    orderItems.innerHTML = '<p id="no-items-message" class="text-gray-500">No items in order yet.</p>';
+                }
+            } else {
+                if (noItemsMessage) {
+                    noItemsMessage.style.display = 'none';
+                }
+            }
+        }
+        
+        // Place order
+        if (placeOrderButton) {
+            placeOrderButton.addEventListener('click', function() {
+                if (currentOrder.items.length === 0) {
+                    alert('Please add items to the order first.');
+                    return;
+                }
+                
+                // Send order to server
+                fetch('{{ url_for("staff.create_order") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentOrder)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Redirect to order view
+                        window.location.href = '{{ url_for("staff.table_detail", table_id=table.id) }}';
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while placing the order.');
+                });
+            });
+        }
+        
+        // Add more items
+        if (addMoreItemsButton) {
+            addMoreItemsButton.addEventListener('click', function() {
+                // Send items to server
+                fetch('{{ url_for("staff.add_order_item", order_id=active_order.id if active_order else 0) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentOrder.items[currentOrder.items.length - 1])
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Refresh page to show updated order
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while adding items to the order.');
+                });
+            });
+        }
+        
+        // Remove item
+        document.querySelectorAll('.remove-item').forEach(button => {
+            button.addEventListener('click', function() {
+                const itemId = this.dataset.id;
+                
+                if (confirm('Are you sure you want to remove this item?')) {
+                    // Send request to server
+                    fetch('{{ url_for("staff.remove_order_item", order_id=active_order.id if active_order else 0, item_id=0) }}'.replace('0', itemId), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Refresh page to show updated order
+                            window.location.reload();
+                        } else {
+                            alert('Error: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while removing the item.');
+                    });
+                }
+            });
+        });
+    });
+</script>
+{% endblock %} 

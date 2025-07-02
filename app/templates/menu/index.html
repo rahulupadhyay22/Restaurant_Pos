@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Restaurant Menu{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Restaurant Menu</h1>
+        {% if current_user.is_authenticated and current_user.role == 'admin' %}
+            <div>
+                <a href="{{ url_for('menu.categories') }}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mr-2">
+                    Manage Categories
+                </a>
+                <a href="{{ url_for('menu.items') }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                    Manage Items
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="mb-4 p-4 rounded {{ 'bg-green-100 text-green-800' if category == 'success' else 'bg-red-100 text-red-800' }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if categories %}
+        {% for category in categories %}
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-gray-300">{{ category.name }}</h2>
+                {% if category.description %}
+                    <p class="text-gray-600 mb-4">{{ category.description }}</p>
+                {% endif %}
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% set items = category.menu_items.all() %}
+                    {% if items %}
+                        {% for item in items %}
+                            {% if item.is_available %}
+                                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                                    {% if item.image_url %}
+                                        <div class="h-48 w-full overflow-hidden">
+                                            <img src="{{ item.image_url }}" alt="{{ item.name }}" class="w-full h-full object-cover">
+                                        </div>
+                                    {% endif %}
+                                    <div class="p-4">
+                                        <div class="flex justify-between items-start">
+                                            <h3 class="text-lg font-semibold">{{ item.name }}</h3>
+                                            <div class="text-right">
+                                                {% if item.has_half_option %}
+                                                    <div class="text-sm text-gray-600">Half: ${{ "%.2f"|format(item.half_price) }}</div>
+                                                {% endif %}
+                                                <div class="font-semibold">${{ "%.2f"|format(item.full_price) }}</div>
+                                            </div>
+                                        </div>
+                                        {% if item.description %}
+                                            <p class="text-gray-600 mt-2">{{ item.description }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="col-span-full text-gray-500">No items available in this category.</div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <p>No menu categories found.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %} 

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Settings{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Admin Settings</h1>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="mb-4 p-4 rounded {{ 'bg-green-100 text-green-800' if category == 'success' else 'bg-red-100 text-red-800' }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Restaurant Information -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Restaurant Information</h2>
+            <form action="{{ url_for('admin.update_restaurant_info') }}" method="post">
+                <div class="mb-4">
+                    <label for="restaurant_name" class="block text-gray-700 text-sm font-bold mb-2">Restaurant Name</label>
+                    <input type="text" id="restaurant_name" name="restaurant_name" value="{{ restaurant_name }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="mb-4">
+                    <label for="restaurant_phone" class="block text-gray-700 text-sm font-bold mb-2">Phone Number</label>
+                    <input type="text" id="restaurant_phone" name="restaurant_phone" value="{{ restaurant_phone }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="mb-4">
+                    <label for="restaurant_address" class="block text-gray-700 text-sm font-bold mb-2">Address</label>
+                    <textarea id="restaurant_address" name="restaurant_address" rows="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">{{ restaurant_address }}</textarea>
+                </div>
+                <div class="flex items-center justify-end">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tax Settings -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Tax Settings</h2>
+            <form action="{{ url_for('admin.update_tax_settings') }}" method="post">
+                <div class="mb-4">
+                    <label for="tax_rate" class="block text-gray-700 text-sm font-bold mb-2">Tax Rate (%)</label>
+                    <input type="number" id="tax_rate" name="tax_rate" value="{{ tax_rate }}" min="0" max="100" step="0.01" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="flex items-center justify-end">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Delivery Integration -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Delivery Integration</h2>
+            <form action="{{ url_for('admin.update_delivery_settings') }}" method="post">
+                <div class="mb-4">
+                    <label for="zomato_api_key" class="block text-gray-700 text-sm font-bold mb-2">Zomato API Key</label>
+                    <input type="text" id="zomato_api_key" name="zomato_api_key" value="{{ Settings.get('zomato_api_key', '') }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="mb-4">
+                    <label for="swiggy_api_key" class="block text-gray-700 text-sm font-bold mb-2">Swiggy API Key</label>
+                    <input type="text" id="swiggy_api_key" name="swiggy_api_key" value="{{ Settings.get('swiggy_api_key', '') }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="flex items-center justify-end">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Database Management -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Database Management</h2>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="text-lg font-medium mb-2">Backup Database</h3>
+                    <p class="text-gray-600 mb-2">Create a backup of the current database.</p>
+                    <form action="{{ url_for('admin.backup_database') }}" method="post">
+                        <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                            Create Backup
+                        </button>
+                    </form>
+                </div>
+                <div>
+                    <h3 class="text-lg font-medium mb-2">Reset Database</h3>
+                    <p class="text-gray-600 mb-2">Warning: This will delete all data and reset the database to its initial state.</p>
+                    <form action="{{ url_for('admin.reset_database') }}" method="post">
+                        <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" onclick="return confirm('Are you sure you want to reset the database? This action cannot be undone.')">
+                            Reset Database
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

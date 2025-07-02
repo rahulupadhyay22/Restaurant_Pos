@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Order #{{ order.id }} - Restaurant POS{% endblock %}
+
+{% block content %}
+<div class="container mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">Order #{{ order.id }}</h1>
+        <div class="flex items-center">
+            <span class="px-3 py-1 rounded text-sm 
+                {{ 'bg-blue-200 text-blue-800' if order.status.value == 'active' else 
+                   'bg-green-200 text-green-800' if order.status.value == 'completed' else 
+                   'bg-red-200 text-red-800' }}">
+                {{ order.status.value|upper }}
+            </span>
+            
+            {% if order.order_type.value != 'dine_in' %}
+            <span class="ml-2 px-3 py-1 rounded text-sm 
+                {{ 'bg-red-100 text-red-800' if order.order_type.value == 'zomato' else 
+                   'bg-orange-100 text-orange-800' }}">
+                {{ order.order_type.value|upper }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Order Details -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Order Details</h2>
+                    <p class="text-sm text-gray-500">{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                </div>
+                
+                {% if order.table %}
+                <p class="mb-4"><span class="font-medium">Table:</span> {{ order.table.name }}</p>
+                {% else %}
+                <div class="mb-4 p-4 bg-gray-50 rounded">
+                    <h3 class="font-medium mb-2">Delivery Information</h3>
+                    <p><span class="font-medium">Customer:</span> {{ order.customer_name }}</p>
+                    <p><span class="font-medium">Phone:</span> {{ order.customer_phone }}</p>
+                    <p><span class="font-medium">Address:</span> {{ order.customer_address }}</p>
+                    {% if order.delivery_id %}
+                    <p><span class="font-medium">Delivery ID:</span> {{ order.delivery_id }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-2 px-4 text-left">Item</th>
+                                <th class="py-2 px-4 text-left">Size</th>
+                                <th class="py-2 px-4 text-left">Quantity</th>
+                                <th class="py-2 px-4 text-left">Price</th>
+                                <th class="py-2 px-4 text-left">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items %}
+                            <tr class="border-t">
+                                <td class="py-2 px-4">
+                                    <div>
+                                        <p class="font-medium">{{ item.menu_item.name }}</p>
+                                        {% if item.notes %}
+                                        <p class="text-xs text-gray-500">Note: {{ item.notes }}</p>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="py-2 px-4">{{ 'Half' if item.is_half else 'Full' }}</td>
+                                <td class="py-2 px-4">{{ item.quantity }}</td>
+                                <td class="py-2 px-4">₹{{ item.price }}</td>
+                                <td class="py-2 px-4">₹{{ item.subtotal }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="bg-gray-50">
+                            <tr>
+                                <td colspan="4" class="py-2 px-4 text-right font-medium">Total:</td>
+                                <td class="py-2 px-4 font-bold">₹{{ order.total_amount }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                {% if order.notes %}
+                <div class="mt-4 p-4 bg-yellow-50 rounded">
+                    <h3 class="font-medium mb-2">Order Notes</h3>
+                    <p>{{ order.notes }}</p>
+                </div>
+                {% endif %}
+                
+                <div class="mt-6 flex justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Created by: {{ order.created_by.username }}</p>
+                        {% if order.status.value == 'completed' %}
+                        <p class="text-sm text-gray-500">Completed at: {{ order.completed_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    {% if order.status.value == 'active' and current_user.is_admin() %}
+                    <div class="flex space-x-2">
+                        <a href="{{ url_for('billing.generate_bill', order_id=order.id) }}" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded">
+                            Generate Bill
+                        </a>
+                        
+                        <form method="POST" action="{{ url_for('order.complete_order', order_id=order.id) }}">
+                            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
+                                Complete Order
+                            </button>
+                        </form>
+                        
+                        <form method="POST" action="{{ url_for('order.cancel_order', order_id=order.id) }}" onsubmit="return confirm('Are you sure you want to cancel this order?');">
+                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded">
+                                Cancel Order
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bill Section -->
+        <div class="lg:col-span-1">
+            {% if order.bill %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Bill Information</h2>
+                
+                <div class="mb-4">
+                    <p><span class="font-medium">Bill Number:</span> {{ order.bill.bill_number }}</p>
+                    <p><span class="font-medium">Created:</span> {{ order.bill.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    <p><span class="font-medium">Status:</span> 
+                        <span class="{{ 'text-green-600' if order.bill.payment_status else 'text-red-600' }}">
+                            {{ 'Paid' if order.bill.payment_status else 'Unpaid' }}
+                        </span>
+                    </p>
+                    {% if order.bill.payment_status %}
+                    <p><span class="font-medium">Payment Method:</span> {{ order.bill.payment_method.value|upper }}</p>
+                    <p><span class="font-medium">Paid At:</span> {{ order.bill.paid_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="border-t pt-4">
+                    <div class="flex justify-between mb-1">
+                        <p>Subtotal:</p>
+                        <p>₹{{ order.bill.subtotal }}</p>
+                    </div>
+                    <div class="flex justify-between mb-1">
+                        <p>Tax:</p>
+                        <p>₹{{ order.bill.tax_amount }}</p>
+                    </div>
+                    {% if order.bill.discount > 0 %}
+                    <div class="flex justify-between mb-1">
+                        <p>Discount:</p>
+                        <p>-₹{{ order.bill.discount }}</p>
+                    </div>
+                    {% endif %}
+                    <div class="flex justify-between font-bold mt-2 pt-2 border-t">
+                        <p>Total:</p>
+                        <p>₹{{ order.bill.total_amount }}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <a href="{{ url_for('billing.view_bill', bill_id=order.bill.id) }}" class="block w-full bg-blue-500 hover:bg-blue-600 text-white text-center py-2 px-4 rounded mb-2">
+                        View Bill
+                    </a>
+                    
+                    <a href="{{ url_for('billing.print_bill', bill_id=order.bill.id) }}" target="_blank" class="block w-full bg-gray-500 hover:bg-gray-600 text-white text-center py-2 px-4 rounded">
+                        Print Bill
+                    </a>
+                    
+                    {% if not order.bill.payment_status and current_user.is_admin() %}
+                    <form method="POST" action="{{ url_for('billing.pay_bill', bill_id=order.bill.id) }}" class="mt-4">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Payment Method</label>
+                            <select name="payment_method" class="border rounded w-full py-2 px-3">
+                                <option value="cash">Cash</option>
+                                <option value="credit_card">Credit Card</option>
+                                <option value="debit_card">Debit Card</option>
+                                <option value="upi">UPI</option>
+                                <option value="online">Online</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded">
+                            Mark as Paid
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% elif order.status.value == 'active' and current_user.is_admin() %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Generate Bill</h2>
+                
+                <p class="mb-4 text-gray-600">This order doesn't have a bill yet. Generate a bill to complete the order.</p>
+                
+                <a href="{{ url_for('billing.generate_bill', order_id=order.id) }}" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded block text-center">
+                    Generate Bill
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

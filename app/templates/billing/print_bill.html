@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill #{{ bill.bill_number }}</title>
+    <style>
+        @page {
+            size: 80mm 297mm;
+            margin: 0;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
+            line-height: 1.2;
+            margin: 0;
+            padding: 10mm;
+            width: 60mm;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 5mm;
+        }
+        
+        .restaurant-name {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 2mm;
+        }
+        
+        .restaurant-info {
+            margin-bottom: 1mm;
+        }
+        
+        .bill-info {
+            margin-bottom: 5mm;
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding: 2mm 0;
+        }
+        
+        .bill-no {
+            font-weight: bold;
+        }
+        
+        .items {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 5mm;
+        }
+        
+        .items th {
+            text-align: left;
+            border-bottom: 1px solid #000;
+            padding-bottom: 1mm;
+        }
+        
+        .items td {
+            padding: 1mm 0;
+        }
+        
+        .item-price {
+            text-align: right;
+        }
+        
+        .totals {
+            width: 100%;
+            margin-bottom: 5mm;
+        }
+        
+        .totals td {
+            padding: 1mm 0;
+        }
+        
+        .total-label {
+            text-align: right;
+            padding-right: 2mm;
+        }
+        
+        .total-value {
+            text-align: right;
+        }
+        
+        .grand-total {
+            font-weight: bold;
+            font-size: 12pt;
+            border-top: 1px solid #000;
+            border-bottom: 1px solid #000;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 5mm;
+        }
+        
+        .payment-info {
+            margin-bottom: 5mm;
+            padding: 2mm 0;
+        }
+        
+        /* Controls for print mode */
+        .print-controls {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        /* Only show controls when not in print mode */
+        @media screen {
+            .print-controls {
+                display: block;
+            }
+        }
+        
+        /* Hide controls when printing */
+        @media print {
+            .print-controls {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% if not print_mode %}
+    <div class="print-controls">
+        <button onclick="window.print()">Print Bill</button>
+        <button onclick="window.close()">Close</button>
+    </div>
+    {% endif %}
+    
+    <div class="header">
+        <div class="restaurant-name">{{ Settings.get('restaurant_name', 'Restaurant Name') }}</div>
+        <div class="restaurant-info">{{ Settings.get('restaurant_address', 'Restaurant Address') }}</div>
+        <div class="restaurant-info">Phone: {{ Settings.get('restaurant_phone', 'Phone Number') }}</div>
+    </div>
+    
+    <div class="bill-info">
+        <div class="bill-no">Bill #: {{ bill.bill_number }}</div>
+        <div>Date: {{ bill.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+        {% if bill.order.table %}
+        <div>Table: {{ bill.order.table.name }}</div>
+        {% endif %}
+        <div>Server: {{ bill.order.created_by.username }}</div>
+    </div>
+    
+    <table class="items">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th class="item-price">Price</th>
+                <th class="item-price">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in bill.order.items %}
+            <tr>
+                <td>{{ item.menu_item.name }} {% if item.is_half %}(Half){% endif %}</td>
+                <td>{{ item.quantity }}</td>
+                <td class="item-price">{{ item.price }}</td>
+                <td class="item-price">{{ item.subtotal }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <table class="totals">
+        <tr>
+            <td class="total-label">Subtotal:</td>
+            <td class="total-value">₹{{ bill.subtotal }}</td>
+        </tr>
+        <tr>
+            <td class="total-label">Tax ({{ "%.1f"|format(bill.tax_amount / bill.subtotal * 100) }}%):</td>
+            <td class="total-value">₹{{ bill.tax_amount }}</td>
+        </tr>
+        {% if bill.discount > 0 %}
+        <tr>
+            <td class="total-label">Discount:</td>
+            <td class="total-value">-₹{{ bill.discount }}</td>
+        </tr>
+        {% endif %}
+        <tr class="grand-total">
+            <td class="total-label">TOTAL:</td>
+            <td class="total-value">₹{{ bill.total_amount }}</td>
+        </tr>
+    </table>
+    
+    {% if bill.payment_status %}
+    <div class="payment-info">
+        <div>Payment Status: Paid</div>
+        <div>Payment Method: {{ bill.payment_method.value|upper }}</div>
+        <div>Paid At: {{ bill.paid_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+    </div>
+    {% endif %}
+    
+    <div class="footer">
+        <p>Thank you for dining with us!</p>
+        <p>Please visit again.</p>
+    </div>
+    
+    <script>
+        {% if print_mode %}
+        window.onload = function() {
+            window.print();
+            {% if standalone %}
+            // Add delay before closing to allow print dialog to appear
+            setTimeout(function() {
+                // Check if we came from another page
+                if (document.referrer) {
+                    window.close();
+                }
+            }, 1000);
+            {% endif %}
+        }
+        {% endif %}
+    </script>
+</body>
+</html> 

@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Delivery Order Details{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Delivery Order Details</h1>
+        <a href="{{ url_for('delivery.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+            Back to Delivery Dashboard
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="mb-4 p-4 rounded {{ 'bg-green-100 text-green-800' if category == 'success' else 'bg-red-100 text-red-800' }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <div class="flex items-center mb-4">
+            <div class="h-10 w-10 rounded-full flex items-center justify-center mr-3 
+                {% if delivery_order.platform.value == 'zomato' %}
+                bg-red-100 text-red-600
+                {% else %}
+                bg-orange-100 text-orange-600
+                {% endif %}">
+                <span class="font-bold">{{ delivery_order.platform.value[0]|upper }}</span>
+            </div>
+            <h2 class="text-xl font-semibold">
+                {{ delivery_order.platform.value|title }} Order 
+                <span class="text-gray-500 text-sm">#{{ delivery_order.platform_order_id }}</span>
+            </h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Order Details -->
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Order Information</h3>
+                <div class="border rounded p-4">
+                    <div class="mb-2">
+                        <span class="font-semibold">Status:</span>
+                        <span class="px-2 ml-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            {% if delivery_order.status.value == 'PENDING' %}
+                            bg-yellow-100 text-yellow-800
+                            {% elif delivery_order.status.value == 'ACCEPTED' or delivery_order.status.value == 'PREPARING' %}
+                            bg-blue-100 text-blue-800
+                            {% elif delivery_order.status.value == 'DELIVERED' or delivery_order.status.value == 'PICKED_UP' %}
+                            bg-green-100 text-green-800
+                            {% elif delivery_order.status.value == 'CANCELLED' %}
+                            bg-red-100 text-red-800
+                            {% else %}
+                            bg-gray-100 text-gray-800
+                            {% endif %}">
+                            {{ delivery_order.status.value }}
+                        </span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="font-semibold">Created At:</span>
+                        <span>{{ delivery_order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                    </div>
+                    {% if delivery_order.order_id %}
+                    <div class="mb-2">
+                        <span class="font-semibold">Restaurant Order ID:</span>
+                        <span>{{ delivery_order.order_id }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <span class="font-semibold">Platform Fee:</span>
+                        <span>₹{{ delivery_order.platform_fee }}</span>
+                    </div>
+                    <div>
+                        <span class="font-semibold">Delivery Fee:</span>
+                        <span>₹{{ delivery_order.delivery_fee }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Details -->
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Customer Information</h3>
+                <div class="border rounded p-4">
+                    <div class="mb-2">
+                        <span class="font-semibold">Name:</span>
+                        <span>{{ delivery_order.customer_name }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="font-semibold">Phone:</span>
+                        <span>{{ delivery_order.customer_phone }}</span>
+                    </div>
+                    <div>
+                        <span class="font-semibold">Address:</span>
+                        <span>{{ delivery_order.customer_address }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-6 flex flex-wrap gap-2">
+            {% if delivery_order.status.value == 'PENDING' %}
+                <form action="{{ url_for('delivery.accept_order', delivery_id=delivery_order.id) }}" method="post" class="inline">
+                    <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                        Accept Order
+                    </button>
+                </form>
+                <form action="{{ url_for('delivery.reject_order', delivery_id=delivery_order.id) }}" method="post" class="inline">
+                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                        Reject Order
+                    </button>
+                </form>
+            {% elif delivery_order.status.value == 'ACCEPTED' %}
+                <form action="{{ url_for('delivery.prepare_order', delivery_id=delivery_order.id) }}" method="post" class="inline">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                        Start Preparing
+                    </button>
+                </form>
+            {% elif delivery_order.status.value == 'PREPARING' %}
+                <form action="{{ url_for('delivery.ready_order', delivery_id=delivery_order.id) }}" method="post" class="inline">
+                    <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded">
+                        Ready for Pickup
+                    </button>
+                </form>
+            {% elif delivery_order.status.value == 'READY' %}
+                <form action="{{ url_for('delivery.complete_order', delivery_id=delivery_order.id) }}" method="post" class="inline">
+                    <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                        Mark as Picked Up
+                    </button>
+                </form>
+            {% endif %}
+            
+            {% if delivery_order.order_id %}
+                <a href="{{ url_for('order.view_order', order_id=delivery_order.order_id) }}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    View Restaurant Order
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

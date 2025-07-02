@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Reports{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Sales Reports</h1>
+        <div>
+            <a href="{{ url_for('admin.dashboard') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="mb-4 p-4 rounded {{ 'bg-green-100 text-green-800' if category == 'success' else 'bg-red-100 text-red-800' }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Sales Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-600 mb-2">Today's Sales</h2>
+            <p class="text-3xl font-bold">${{ "%.2f"|format(sales_today) }}</p>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-600 mb-2">This Week's Sales</h2>
+            <p class="text-3xl font-bold">${{ "%.2f"|format(sales_week) }}</p>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-600 mb-2">This Month's Sales</h2>
+            <p class="text-3xl font-bold">${{ "%.2f"|format(sales_month) }}</p>
+        </div>
+    </div>
+
+    <!-- Popular Items -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4">Popular Items (This Month)</h2>
+        {% if popular_items %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for item in popular_items %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900">{{ item.name }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">{{ item.total_quantity }}</div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-gray-500">No sales data available for this month.</div>
+        {% endif %}
+    </div>
+
+    <!-- Date Range Selector -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4">Custom Date Range Report</h2>
+        <form action="{{ url_for('admin.reports') }}" method="get" class="flex flex-wrap items-end gap-4">
+            <div class="mb-0">
+                <label for="start_date" class="block text-gray-700 text-sm font-bold mb-2">Start Date</label>
+                <input type="date" id="start_date" name="start_date" class="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-0">
+                <label for="end_date" class="block text-gray-700 text-sm font-bold mb-2">End Date</label>
+                <input type="date" id="end_date" name="end_date" class="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-0">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Generate Report
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Export Options -->
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Export Reports</h2>
+        <div class="flex flex-wrap gap-4">
+            <a href="{{ url_for('admin.export_report', format='csv') }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                Export as CSV
+            </a>
+            <a href="{{ url_for('admin.export_report', format='pdf') }}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                Export as PDF
+            </a>
+            <a href="{{ url_for('admin.export_report', format='excel') }}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                Export as Excel
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %} 
